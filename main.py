@@ -91,7 +91,6 @@ def pause_enter(prompt: str = "Press enter to continue..."):
         key = read_key()
     clear()
 
-
 def prompt_yn(prompt: str) -> bool | None:
     response = "".join(filter(lambda x: x not in whitespace, input(prompt))).lower()
     if response == "yes":
@@ -334,7 +333,13 @@ def schoolday_events(elapsed_time):
             pause_enter()
             print(f"\033[33mLate Ending\033[0m")
         else:
-            pass
+            print("You choose not to check in with Ms.Minchin after arrving late")
+            time.sleep(3)
+            pause_enter()
+            print("Because you did not check in, you are suspended")
+            time.sleep(3)
+            pause_enter()
+            print(f"\033[31mSuspended Ending\033[0m")
     else:
         print("You arrive at school, but all the lights are off...")
         time.sleep(3)
