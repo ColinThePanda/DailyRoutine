@@ -38,8 +38,12 @@ def show_cursor():
 
 def read_char() -> str:
     if platform.system() == "Windows" or (TYPE_CHECKING and sys.platform == "win32"):
+        # Clear input buffer
+        while msvcrt.kbhit():
+            msvcrt.getch()
         return msvcrt.getwch()
     else:
+        termios.tcflush(sys.stdin, termios.TCIFLUSH)
         fd = sys.stdin.fileno()
         old = termios.tcgetattr(fd)
         try:
@@ -84,12 +88,80 @@ def read_key() -> str:
         return c1 + c2 + c3 + c4 + c5
 
 
+def input(prompt: object = ""):
+    print(prompt, end="")
+    if platform.system() == "Windows" or (TYPE_CHECKING and sys.platform == "win32"):
+        line = []
+        while True:
+            char = read_char()
+
+            # Check for newline (Enter)
+            if char in ("\r", "\n"):
+                print()  # Print a newline for visual clarity
+                break
+            # Handle backspace
+            elif char == "\x08":
+                if line:
+                    line.pop()
+                    print(
+                        "\b \b", end="", flush=True
+                    )  # Move back, overwrite with space, move back again
+            else:
+                line.append(char)
+                print(char, end="", flush=True)
+
+        return "".join(line)
+
+    else:
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+
+        try:
+            tty.setraw(fd)
+            line = []
+
+            while True:
+                ch = sys.stdin.read(1)
+
+                # Check for Enter key (carriage return)
+                if ch == "\r":
+                    sys.stdout.write("\n")
+                    break
+
+                # Check for backspace or delete
+                elif ch in ("\x08", "\x7f"):
+                    if line:
+                        line.pop()
+                        # Erase the character from the screen
+                        sys.stdout.write("\b \b")
+                        sys.stdout.flush()
+
+                # Handle Ctrl+C, which normally raises KeyboardInterrupt
+                elif ch == "\x03":
+                    # Restore settings before exiting
+                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+                    raise KeyboardInterrupt
+
+                # Handle regular characters
+                else:
+                    line.append(ch)
+                    sys.stdout.write(ch)
+                    sys.stdout.flush()
+
+        finally:
+            # Always restore the original terminal settings
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+        return "".join(line)
+
+
 def pause_enter(prompt: str = "Press enter to continue..."):
     print(prompt, end="", flush=True)
     key = ""
     while key != "\x0d" and key != "\x0d":
         key = read_key()
     clear()
+
 
 def prompt_yn(prompt: str) -> bool | None:
     response = "".join(filter(lambda x: x not in whitespace, input(prompt))).lower()
@@ -374,10 +446,12 @@ def main():
 
     clear()
     show_cursor()
-    day = prompt_weekday()
-    if not day:
+    while True:
+        day = prompt_weekday()
+        if day:
+            break
         time.sleep(3)
-        return
+        clear()
 
     hide_cursor()
     clear()
