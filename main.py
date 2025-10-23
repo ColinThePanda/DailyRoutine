@@ -2,6 +2,7 @@ import time
 import os
 import sys
 import random
+import atexit
 from string import whitespace
 from typing import TYPE_CHECKING
 import platform
@@ -10,6 +11,16 @@ if platform.system() == "Windows" or (TYPE_CHECKING and sys.platform == "win32")
     import msvcrt  # windows import
 else:
     import termios, tty, sys  # unix imports
+
+
+def min_to_time(mins: int) -> tuple[int, int, int, str]:
+    mins = int(mins)
+    hrs, mins = mins // 60, mins % 60
+    days, hrs = hrs // 24, hrs % 24
+    day_parts_map = {0: "am", 1: "pm"}
+    daytime = day_parts_map[hrs % 24 // 12]
+    hrs %= 12
+    return mins, hrs, days, daytime
 
 
 def clear():
@@ -58,6 +69,9 @@ def read_key() -> str:
     if platform.system() == "Windows" or (TYPE_CHECKING and sys.platform == "win32"):
         ch = read_char()
 
+        if ch == "\x03":
+            raise KeyboardInterrupt
+
         if ch in "\x00\xe0":
             ch = "\x00" + read_char()
 
@@ -68,6 +82,9 @@ def read_key() -> str:
         return ch
     else:
         c1 = read_char()
+
+        if c1 in Key.CTRL_Z:
+            raise KeyboardInterrupt
 
         if c1 != "\x1b":
             return c1
@@ -89,11 +106,15 @@ def read_key() -> str:
 
 
 def input(prompt: object = ""):
-    print(prompt, end="")
+    print(prompt, end="", flush=True)
     if platform.system() == "Windows" or (TYPE_CHECKING and sys.platform == "win32"):
         line = []
         while True:
-            char = read_char()
+            try:
+                char = read_key()
+            except KeyboardInterrupt:
+                print("Interrupt")
+                sys.exit()
 
             # Check for newline (Enter)
             if char in ("\r", "\n"):
@@ -307,9 +328,9 @@ def clothing_minigame():
         clear()
         for key, value in wearing.items():
             if value is True:
-                print(f"\033[32m{key}\033[0m")
+                print(f"\033[32m{key}\033[0m", flush=True)
             else:
-                print(f"\033[31m{key}\033[0m")
+                print(f"\033[31m{key}\033[0m", flush=True)
         show_cursor()
         response = input("\n> ")
         choice = "".join(filter(lambda x: x not in whitespace, response)).lower()
@@ -349,7 +370,7 @@ def schoolday_events(elapsed_time):
     time.sleep(3)
 
     shower_start = time.time()
-    shower_minigame()
+    # shower_minigame()
     shower_end = time.time()
 
     elapsed_time += shower_end - shower_start
@@ -360,7 +381,7 @@ def schoolday_events(elapsed_time):
     time.sleep(3)
 
     clothing_start = time.time()
-    clothing_minigame()
+    # clothing_minigame()
     clothing_end = time.time()
 
     elapsed_time += clothing_end - clothing_start
@@ -369,21 +390,29 @@ def schoolday_events(elapsed_time):
     time.sleep(3)
 
     clear()
-    hrs, mins = int(elapsed_time // 60), int(elapsed_time % 60)
-    if hrs > 0:
-        print(f"It took you {hrs}hours and {mins} minutes to get ready for school")
+    mins, hrs, days, _ = min_to_time(elapsed_time)
+    if days > 0:
+        if hrs > 0:
+            print(
+                f"It took you {days} days, {hrs} hours, and {mins} minutes to get ready for school"
+            )
+        else:
+            print(f"It took you {days} days and {mins} minutes to get ready for school")
     else:
-        print(f"It took you {mins} minutes to get ready for school")
+        if hrs > 0:
+            print(f"It took you {hrs} hours and {mins} minutes to get ready for school")
+        else:
+            print(f"It took you {mins} minutes to get ready for school")
     time.sleep(3)
+    clear()
 
-    elapsed_time += 15
-    hrs, mins = int(elapsed_time // 60), int(elapsed_time % 60)
+    elapsed_time = 1600
+    elapsed_time += 15 + 7 * 60
 
-    day_parts_map = {0: "am", 1: "pm"}
-    daytime = day_parts_map[hrs % 24 // 12]
+    mins, hrs, days, daytime = min_to_time(elapsed_time)
 
     if elapsed_time <= 80:
-        print(f"You drive to school and arrive at {hrs + 7}:{mins}{daytime}")
+        print(f"You drive to school and arrive at {hrs}:{mins:02d}{daytime}")
         time.sleep(3)
         pause_enter()
         print("You made it to school on time and you are ready to start your day!")
@@ -391,10 +420,11 @@ def schoolday_events(elapsed_time):
         pause_enter()
         print(f"\033[32mGood Ending\033[0m")
     elif elapsed_time <= 480:
-        print(f"You drive to school and arrive at {hrs + 7}:{mins}{daytime}")
+        print(f"You drive to school and arrive at {hrs}:{mins:02d}{daytime}")
         time.sleep(3)
         pause_enter()
         print("You are late for school")
+        show_cursor()
         check_in = prompt_yn("Do you want to check in with Ms.Minchin? ")
         clear()
         if check_in is True:
@@ -413,19 +443,41 @@ def schoolday_events(elapsed_time):
             pause_enter()
             print(f"\033[31mSuspended Ending\033[0m")
     else:
-        print("You arrive at school, but all the lights are off...")
-        time.sleep(3)
-        pause_enter()
-        print(
-            f"You check the time on your phone, and you see that it is {hrs + 7}:{mins}{daytime}"
-        )
-        time.sleep(3)
-        pause_enter()
-        print("School is already over")
+        rev_daytime_map = {"am": 0, "pm": 1}
+        total_time = (rev_daytime_map.get(daytime, 0) + 1) * (hrs * 60) + mins
+        if days > 0 and total_time / 60 >= 8.33 and total_time / 60 <= 15:
+            print("You arrive at school, and everyone is already in class")
+            time.sleep(3)
+            pause_enter()
+            print(
+                f"You check the time on your phone, and you see that it is {hrs}:{mins:02d}{daytime}"
+            )
+            time.sleep(3)
+            pause_enter()
+            if days == 1:
+                print("School is currently in session, but it is the next day")
+            else:
+                print("School is currently in session, but you missed a few days")
+        else:
+            print("You arrive at school, but all the lights are off...")
+            time.sleep(3)
+            pause_enter()
+            print(
+                f"You check the time on your phone, and you see that it is {hrs}:{mins:02d}{daytime}"
+            )
+            time.sleep(3)
+            pause_enter()
+            print("School is already over")
         time.sleep(3)
         pause_enter()
         print(f"\033[31mAbsent Ending\033[0m")
-    input()
+    time.sleep(3)
+    pause_enter("Press enter to exit...")
+
+
+def clean_up():
+    previous_window()
+    show_cursor()
 
 
 def main():
@@ -450,7 +502,7 @@ def main():
         day = prompt_weekday()
         if day:
             break
-        time.sleep(3)
+        time.sleep(1)
         clear()
 
     hide_cursor()
@@ -462,6 +514,5 @@ def main():
 
 
 if __name__ == "__main__":
+    atexit.register(clean_up)
     main()
-    previous_window()
-    show_cursor()
