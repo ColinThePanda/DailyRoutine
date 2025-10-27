@@ -28,22 +28,22 @@ def clear():
 
 
 def new_window():
-    sys.stdout.write(f"\033[?1049h")
+    sys.stdout.write("\033[?1049h")
     sys.stdout.flush()
 
 
 def previous_window():
-    sys.stdout.write(f"\033[?1049l")
+    sys.stdout.write("\033[?1049l")
     sys.stdout.flush()
 
 
 def hide_cursor():
-    sys.stdout.write(f"\033[?25l")
+    sys.stdout.write("\033[?25l")
     sys.stdout.flush()
 
 
 def show_cursor():
-    sys.stdout.write(f"\033[?25h")
+    sys.stdout.write("\033[?25h")
     sys.stdout.flush()
 
 
@@ -362,33 +362,7 @@ def clothing_minigame():
                     break
 
 
-def schoolday_events(elapsed_time):
-    print("Today is a school day")
-    time.sleep(3)
-    clear()
-    print("You have to go take a shower")
-    time.sleep(3)
-
-    shower_start = time.time()
-    # shower_minigame()
-    shower_end = time.time()
-
-    elapsed_time += shower_end - shower_start
-
-    time.sleep(1)
-    clear()
-    print("You take a nice shower and wash yourself")
-    time.sleep(3)
-
-    clothing_start = time.time()
-    # clothing_minigame()
-    clothing_end = time.time()
-
-    elapsed_time += clothing_end - clothing_start
-
-    print("You are fully dressed")
-    time.sleep(3)
-
+def handle_school_endings(elapsed_time: int):
     clear()
     mins, hrs, days, _ = min_to_time(elapsed_time)
     if days > 0:
@@ -406,10 +380,7 @@ def schoolday_events(elapsed_time):
     time.sleep(3)
     clear()
 
-    elapsed_time = 1600
-    elapsed_time += 15 + 7 * 60
-
-    mins, hrs, days, daytime = min_to_time(elapsed_time)
+    mins, hrs, days, daytime = min_to_time(elapsed_time + 15 + 7 * 60)
 
     if elapsed_time <= 80:
         print(f"You drive to school and arrive at {hrs}:{mins:02d}{daytime}")
@@ -471,6 +442,37 @@ def schoolday_events(elapsed_time):
         time.sleep(3)
         pause_enter()
         print(f"\033[31mAbsent Ending\033[0m")
+
+
+def schoolday_events(elapsed_time):
+    print("Today is a school day")
+    time.sleep(3)
+    clear()
+    print("You have to go take a shower")
+    time.sleep(3)
+
+    shower_start = time.time()
+    shower_minigame()
+    shower_end = time.time()
+
+    elapsed_time += shower_end - shower_start
+
+    time.sleep(1)
+    clear()
+    print("You take a nice shower and wash yourself")
+    time.sleep(3)
+
+    clothing_start = time.time()
+    clothing_minigame()
+    clothing_end = time.time()
+
+    elapsed_time += clothing_end - clothing_start
+
+    print("You are fully dressed")
+    time.sleep(3)
+
+    handle_school_endings(int(elapsed_time))
+
     time.sleep(3)
     pause_enter("Press enter to exit...")
 
