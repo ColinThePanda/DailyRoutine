@@ -6,7 +6,7 @@ import atexit
 from string import whitespace
 from typing import Tuple
 
-if sys.platform == "win32":
+if sys.platform == "win32": 
     import msvcrt  # windows import
 else:
     import termios, tty, sys  # unix imports
@@ -51,7 +51,7 @@ def read_char() -> str:
         # Clear input buffer
         while msvcrt.kbhit():
             msvcrt.getch()
-        return msvcrt.getwch()
+        return msvcrt.getwch() #Read char from input buffer after cleared
     else:
         termios.tcflush(sys.stdin, termios.TCIFLUSH)
         fd = sys.stdin.fileno()
@@ -68,14 +68,14 @@ def read_key() -> str:
     if sys.platform == "win32":
         ch = read_char()
 
-        if ch == "\x03":
+        if ch == "\x03": # Keyboard Interrupt if CTRL-C
             raise KeyboardInterrupt
 
-        if ch in "\x00\xe0":
-            ch = "\x00" + read_char()
+        if ch in "\x00\xe0": # if special function key
+            ch = "\x00" + read_char() # read another char
 
-        if "\ud800" <= ch <= "\udfff":
-            ch += read_char()
+        if "\ud800" <= ch <= "\udfff": # if part of surrogate unicode chars
+            ch += read_char() # read another char
             ch = ch.encode("utf-16", errors="surrogatepass").decode("utf-16")
 
         return ch
@@ -110,20 +110,20 @@ def input(prompt: object = ""):
         line = []
         while True:
             try:
-                char = read_key()
+                char = read_key() # read key
             except KeyboardInterrupt:
                 print("Interrupt")
                 sys.exit()
 
-            if char in ("\r", "\n"):
+            if char in ("\r", "\n"): # if enter
                 print()
                 break
-            elif char == "\x08":
+            elif char == "\x08": # if backspace
                 if line:
-                    line.pop()
+                    line.pop() # remove last letter
                     print(
                         "\b \b", end="", flush=True
-                    )
+                    ) # delete char and move back
             else:
                 line.append(char)
                 print(char, end="", flush=True)
@@ -173,16 +173,16 @@ def input(prompt: object = ""):
         return "".join(line)
 
 
-def pause_enter(prompt: str = "Press enter to continue..."):
+def pause_enter(prompt: object = "Press enter to continue..."):
     print(prompt, end="", flush=True)
     key = ""
-    while key != "\x0d" and key != "\x0d":
+    while key not in ("\r", "\n"): # while key not enter
         key = read_key()
     clear()
 
 
 def prompt_yn(prompt: str) -> bool | None:
-    response = "".join(filter(lambda x: x not in whitespace, input(prompt))).lower()
+    response = "".join(filter(lambda x: x not in whitespace, input(prompt))).lower() # get input no whitespace lowercase
     if response == "yes":
         return True
     elif response == "no":
@@ -193,11 +193,11 @@ def prompt_yn(prompt: str) -> bool | None:
 
 
 def prompt_int(prompt: str) -> int | None:
-    response = "".join(filter(lambda x: x not in whitespace, input(prompt))).lower()
+    response = "".join(filter(lambda x: x not in whitespace, input(prompt))).lower() # get input no whitespace lowercase
     try:
-        return int(response)
+        return int(response) # try convert to int
     except ValueError:
-        return None
+        return None # return None if not convertable
 
 
 def prompt_weekday() -> int | None:
@@ -226,12 +226,12 @@ def snooze_loop():
     total_hours = 7
     day_parts_map = {0: "am", 1: "pm"}
     while True:
-        days, hrs = total_hours // 24, total_hours % 24
-        daytime = day_parts_map[hrs // 12]
+        days, hrs = total_hours // 24, total_hours % 24 # get days and remaining hours from total hours
+        daytime = day_parts_map[hrs // 12] # get time of day
 
         clear()
         show_cursor()
-        print(f"The time is {(hrs - 1)%12 + 1}{daytime}")
+        print(f"The time is {(hrs - 1)%12 + 1}{daytime}") # display time in form 11am
         sleep = prompt_yn("Do you want to sleep more? ")
         if sleep is None:
             hide_cursor()
@@ -249,7 +249,7 @@ def snooze_loop():
         hide_cursor()
         clear()
         for i in range(3):
-            print(f"\rSleeping{str('.') * int(i+1)}", end="")
+            print(f"\rSleeping{str('.') * int(i+1)}", end="") # animation with 1, 2, and then 3 "."
             time.sleep(1 / 3)
         clear()
     return days, hrs
@@ -267,12 +267,12 @@ def weekend_events(day: int):
     clear()
     hide_cursor()
 
-    new_day = (day + days - 1) % 7 + 1
+    new_day = (day + days - 1) % 7 + 1 # loop days
     if (
         new_day >= 2
         and new_day <= 6
         and (new_day >= 3 or (new_day == 2 and hrs > 8.33))
-    ):
+    ): # if weekday and either tuesday+ or monday and after 8:20am
         print(
             "You wake up, and realize that you slept so much that you missed school..."
         )
@@ -313,11 +313,11 @@ def shower_minigame():
         clear()
 
         if temp > correct_temp:
-            print("\033[31mToo Hot!\033[0m")
+            print("\033[31mToo Hot!\033[0m") # red text
         elif temp < correct_temp:
-            print("\033[34mToo Cold!\033[0m")
+            print("\033[34mToo Cold!\033[0m") # blue text
         else:
-            print("\033[32mPerfect!\033[0m")
+            print("\033[32mPerfect!\033[0m") # green text
             break
 
         time.sleep(1)
@@ -345,25 +345,25 @@ def clothing_minigame():
         clear()
         for key, value in wearing.items():
             if value is True:
-                print(f"\033[32m{key}\033[0m", flush=True)
+                print(f"\033[32m{key}\033[0m", flush=True) # green if wearing
             else:
-                print(f"\033[31m{key}\033[0m", flush=True)
+                print(f"\033[31m{key}\033[0m", flush=True) # red if not wearing
         show_cursor()
         response = input("\n> ")
-        choice = "".join(filter(lambda x: x not in whitespace, response)).lower()
+        choice = "".join(filter(lambda x: x not in whitespace, response)).lower() # get input no whitespace lowercase
         hide_cursor()
         clear()
 
         if choice in wearing.keys():
-            if choice == "pants" and wearing["underwear"] is False:
+            if choice == "pants" and wearing["underwear"] is False: # if trying to put pants on before underwear
                 print("You can't put pants on before underwear")
                 time.sleep(3)
                 continue
-            if choice == "shoes" and wearing["socks"] is False:
+            if choice == "shoes" and wearing["socks"] is False: # if trying to put shoes on before socks
                 print("You can't put shoes on before socks")
                 time.sleep(3)
                 continue
-            if choice == "shoes" and wearing["pants"] is False:
+            if choice == "shoes" and wearing["pants"] is False: # if trying to put shoes on before pants
                 print("You can't put shoes on before pants")
                 time.sleep(3)
                 continue
@@ -375,7 +375,7 @@ def clothing_minigame():
             else:
                 wearing[choice] = True
 
-                if all(wearing.values()):
+                if all(wearing.values()): # if wearing all
                     break
 
 
@@ -399,7 +399,7 @@ def handle_school_endings(elapsed_time: int, day: int):
 
     mins, hrs, days, daytime = min_to_time(elapsed_time + 15 + 7 * 60)
 
-    if elapsed_time <= 80:
+    if elapsed_time <= 80: # if not late
         print(f"You drive to school and arrive at {hrs}:{mins:02d}{daytime}")
         time.sleep(3)
         pause_enter()
@@ -407,7 +407,7 @@ def handle_school_endings(elapsed_time: int, day: int):
         time.sleep(3)
         pause_enter()
         print(f"\033[32mGood Ending\033[0m")
-    elif elapsed_time <= 480:
+    elif elapsed_time <= 480: # if late but school still in session
         print(f"You drive to school and arrive at {hrs}:{mins:02d}{daytime}")
         time.sleep(3)
         pause_enter()
@@ -434,7 +434,7 @@ def handle_school_endings(elapsed_time: int, day: int):
         rev_daytime_map = {"am": 0, "pm": 1}
         total_time = (rev_daytime_map.get(daytime, 0) + 1) * (hrs * 60) + mins
         new_day = (day + days - 1) % 7 + 1
-        if new_day >= 2 and new_day <= 6 and days >= 1:
+        if new_day >= 2 and new_day <= 6 and days >= 1: # if school in session different day
             print("You arrive at school, and everyone is already in class")
             time.sleep(3)
             pause_enter()
@@ -443,7 +443,7 @@ def handle_school_endings(elapsed_time: int, day: int):
             )
             time.sleep(3)
             pause_enter()
-            if total_time / 60 >= 8.33 and total_time / 60 <= 15:
+            if total_time / 60 >= 8.33 and total_time / 60 <= 15: # if school still in session
                 if days == 1:
                     print("School is currently in session, but it is the next day")
                 else:
